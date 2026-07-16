@@ -252,17 +252,32 @@ def init_session_state() -> None:
         st.session_state.last_results = pd.DataFrame()
 
 
+def _get_config(key: str, default: str = "") -> str:
+    """Look up a config value from Streamlit secrets first, then env vars.
+
+    Streamlit Community Cloud populates st.secrets from the app's "Secrets"
+    settings panel; it does not always mirror those into os.environ, so we
+    check both to support Cloud, local .env/.env-style env vars, and Docker.
+    """
+    try:
+        if key in st.secrets:
+            return str(st.secrets[key])
+    except Exception:
+        pass  # st.secrets raises if no secrets.toml exists at all locally
+    return os.getenv(key, default)
+
+
 def sidebar_credentials() -> EbayCredentials:
     st.sidebar.header("eBay API Credentials")
     client_id = st.sidebar.text_input(
-        "Client ID", value=os.getenv("EBAY_CLIENT_ID", ""), type="default"
+        "Client ID", value=_get_config("EBAY_CLIENT_ID"), type="default"
     )
     client_secret = st.sidebar.text_input(
-        "Client Secret", value=os.getenv("EBAY_CLIENT_SECRET", ""), type="password"
+        "Client Secret", value=_get_config("EBAY_CLIENT_SECRET"), type="password"
     )
     environment = st.sidebar.selectbox(
         "Environment", ["PRODUCTION", "SANDBOX"],
-        index=0 if os.getenv("EBAY_ENV", "PRODUCTION") == "PRODUCTION" else 1,
+        index=0 if _get_config("EBAY_ENV", "PRODUCTION") == "PRODUCTION" else 1,
     )
     marketplace_id = st.sidebar.selectbox(
         "Marketplace",
